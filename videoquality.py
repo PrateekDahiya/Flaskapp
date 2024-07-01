@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import yt_dlp
 
 app = Flask(__name__)
-
+CORS(app)
 
 def get_video_qualities(video_url):
     ydl_opts = {
