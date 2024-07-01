@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
+from yt_dlp.utils import ExtractorError, DownloadError
 
 app = Flask(__name__)
 CORS(app)
@@ -10,27 +11,32 @@ def get_video_qualities(video_url):
         'listformats': False,
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(video_url, download=False)
-        formats = info_dict.get('formats', [])
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(video_url, download=False)
+            formats = info_dict.get('formats', [])
 
-        video_quality_map = {}
-        best_audio = None
-        highest_bitrate = 0
+            video_quality_map = {}
+            best_audio = None
+            highest_bitrate = 0
 
-        for f in formats:
-            if f.get('ext') == 'webm' and f.get('vcodec') != 'none':
-                resolution = f.get('height')
-                if resolution is not None and resolution not in video_quality_map:
-                    video_quality_map[resolution] = f.get('url')
-            elif f.get('acodec') != 'none' and f.get('abr') is not None:
-                bitrate = f.get('abr')
-                if bitrate > highest_bitrate:
-                    highest_bitrate = bitrate
-                    best_audio = f.get('url')
+            for f in formats:
+                if f.get('ext') == 'webm' and f.get('vcodec') != 'none':
+                    resolution = f.get('height')
+                    if resolution is not None and resolution not in video_quality_map:
+                        video_quality_map[resolution] = f.get('url')
+                elif f.get('acodec') != 'none' and f.get('abr') is not None:
+                    bitrate = f.get('abr')
+                    if bitrate > highest_bitrate:
+                        highest_bitrate = bitrate
+                        best_audio = f.get('url')
 
-        video_quality_list = [{"resolution": res, "url": url} for res, url in video_quality_map.items()]
-        return video_quality_list, best_audio
+            video_quality_list = [{"resolution": res, "url": url} for res, url in video_quality_map.items()]
+            return video_quality_list, best_audio
+
+    except (ExtractorError, DownloadError) as e:
+        # Handle the error, e.g., video unavailable
+        return None, None
 
 
 def get_video_url_by_quality(video_list, selected_quality):
@@ -54,6 +60,9 @@ def get_video_url():
 
     video_url = f'https://www.youtube.com/watch?v={video_id}'
     video_qualities, best_audio_url = get_video_qualities(video_url)
+
+    if video_qualities is None and best_audio_url is None:
+        return jsonify({"error": "Video is unavailable or restricted"}), 404
 
     if quality:
         selected_video_url = get_video_url_by_quality(video_qualities, quality)
