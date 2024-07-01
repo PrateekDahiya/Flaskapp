@@ -32,11 +32,25 @@ def get_video_qualities(video_url):
                         best_audio = f.get('url')
 
             video_quality_list = [{"resolution": res, "url": url} for res, url in video_quality_map.items()]
-            return video_quality_list, best_audio
+
+            # Get the best video URL using the format 'b'
+            best_video_opts = {
+                'format': 'b',
+                'quiet': True,
+                'get_url': True
+            }
+            best_video_url = None
+            with yt_dlp.YoutubeDL(best_video_opts) as best_ydl:
+                try:
+                    best_video_url = best_ydl.extract_info(video_url, download=False)['url']
+                except (ExtractorError, DownloadError):
+                    best_video_url = None
+
+            return video_quality_list, best_audio, best_video_url
 
     except (ExtractorError, DownloadError) as e:
         # Handle the error, e.g., video unavailable
-        return None, None
+        return None, None, None
 
 
 def get_video_url_by_quality(video_list, selected_quality):
@@ -59,9 +73,9 @@ def get_video_url():
         return jsonify({"error": "Video ID must be provided"}), 400
 
     video_url = f'https://www.youtube.com/watch?v={video_id}'
-    video_qualities, best_audio_url = get_video_qualities(video_url)
+    video_qualities, best_audio_url, best_video_url = get_video_qualities(video_url)
 
-    if video_qualities is None and best_audio_url is None:
+    if video_qualities is None and best_audio_url is None and best_video_url is None:
         return jsonify({"error": "Video is unavailable or restricted"}), 404
 
     if quality:
@@ -70,6 +84,7 @@ def get_video_url():
             return jsonify({
                 "selected_video_url": selected_video_url,
                 "best_audio_url": best_audio_url,
+                "best_video_url": best_video_url,
                 "video_quality_options": video_qualities
             })
         else:
@@ -77,6 +92,7 @@ def get_video_url():
     else:
         return jsonify({
             "best_audio_url": best_audio_url,
+            "best_video_url": best_video_url,
             "video_quality_options": video_qualities
         })
 
