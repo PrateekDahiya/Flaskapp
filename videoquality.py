@@ -97,5 +97,20 @@ def get_video_url():
         })
 
 
+@app.route('/get-short-url', methods=['GET'])
+def get_short_url():
+    video_id = request.args.get('video_id')
+    if not video_id:
+        return jsonify({"error": "Video ID must be provided"}), 400
+
+    video_url = f'https://www.youtube.com/watch?v={video_id}'
+    _, _, best_video_url = get_video_qualities(video_url)
+
+    if best_video_url is None:
+        return jsonify({"error": "Video is unavailable or restricted"}), 404
+
+    return jsonify({"stream_url": best_video_url})
+
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8111)
