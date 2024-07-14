@@ -38,11 +38,11 @@ def get_video_qualities(video_url):
             highest_bitrate = 0
 
             for f in formats:
-                if f.get('vcodec') != 'none':  # Check if it has a video codec
+                if f.get('vcodec') != 'none' and f.get('url') and 'manifest' not in f.get('url'):
                     resolution = f.get('height')
                     if resolution is not None and resolution not in video_quality_map:
                         video_quality_map[resolution] = f.get('url')
-                elif f.get('acodec') != 'none' and f.get('abr') is not None:
+                elif f.get('acodec') != 'none' and f.get('abr') is not None and f.get('url') and 'manifest' not in f.get('url'):
                     bitrate = f.get('abr')
                     if bitrate > highest_bitrate:
                         highest_bitrate = bitrate
