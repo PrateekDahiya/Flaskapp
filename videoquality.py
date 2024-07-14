@@ -71,6 +71,25 @@ def get_video_url_by_quality(video_list, selected_quality):
             return video['url']
     return None
 
+def get_video_with_audio(video_id):
+    ydl_opts = {
+        'quiet': True,
+        'format': 'best',
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        video_url = f'https://www.youtube.com/watch?v={video_id}'
+        try:
+            info_dict = ydl.extract_info(video_url, download=False)
+            if 'url' in info_dict:
+                return info_dict['url']
+            else:
+                print(f'No stream URL found for video {video_id}')
+        except Exception as e:
+            print(f'Failed to retrieve stream URL for {video_id}: {str(e)}')
+
+    return None
+
 @app.route('/get_video_url', methods=['GET'])
 def get_video_url():
     video_id = request.args.get('video_id')
@@ -109,7 +128,7 @@ def get_short_url():
         return jsonify({"error": "Video ID must be provided"}), 400
 
     video_url = f'https://www.youtube.com/watch?v={video_id}'
-    _, _, best_video_url = get_video_qualities(video_url)
+    best_video_url = get_video_with_audio(video_url)
 
     if best_video_url is None:
         return jsonify({"error": "Video is unavailable or restricted"}), 404
