@@ -71,14 +71,13 @@ def get_video_url_by_quality(video_list, selected_quality):
             return video['url']
     return None
 
-def get_video_with_audio(video_id):
+def get_video_with_audio(video_url):
     ydl_opts = {
         'quiet': True,
         'format': 'best',
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        video_url = f'https://www.youtube.com/watch?v={video_id}'
         try:
             info_dict = ydl.extract_info(video_url, download=False)
             if 'url' in info_dict:
