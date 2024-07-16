@@ -9,6 +9,7 @@ CORS(app)
 def get_video_qualities(video_url):
     ydl_opts = {
         'listformats': False,
+        'quiet': True,
     }
 
     try:
