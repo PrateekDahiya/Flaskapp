@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
+import os
 from yt_dlp.utils import ExtractorError, DownloadError
 
 app = Flask(__name__)
