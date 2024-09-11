@@ -6,11 +6,16 @@ from yt_dlp.utils import ExtractorError, DownloadError
 app = Flask(__name__)
 CORS(app)
 
+cookies = os.getenv('YT_COOKIES')
+cookies_file = '/tmp/cookies.txt'
+with open(cookies_file, 'w') as f:
+    f.write(cookies)
+
 def get_video_qualities(video_url):
     ydl_opts = {
         'listformats': False,
         'quiet': True,
-        'cookiefile': './cookies.txt'
+        'cookiefile': cookies_file,
     }
 
     try:
