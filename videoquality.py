@@ -2,16 +2,24 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
 from yt_dlp.utils import ExtractorError, DownloadError
+import os
 
 app = Flask(__name__)
 CORS(app)
 
 
 def get_video_qualities(video_url):
+    cookie_file = './cookies.txt'
+    
+    # Check if the cookies file exists
+    if not os.path.exists(cookie_file):
+        print(f"Warning: {cookie_file} does not exist or is not accessible.")
+        cookie_file = None  # Do not use cookies if file is missing
+    
     ydl_opts = {
         'listformats': False,
         'quiet': True,
-        'cookiefile': './cookies.txt',
+        'cookiefile': cookie_file,  # Use cookies only if the file exists
     }
 
     try:
@@ -53,6 +61,7 @@ def get_video_qualities(video_url):
 
     except (ExtractorError, DownloadError) as e:
         # Handle the error, e.g., video unavailable
+        print(f"Error extracting video info: {e}")
         return None, None, None
 
 
