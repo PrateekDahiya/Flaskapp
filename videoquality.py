@@ -13,8 +13,19 @@ def get_video_qualities(video_url):
     
     # Check if the cookies file exists
     if not os.path.exists(cookie_file):
-        print(f"Warning: {cookie_file} does not exist or is not accessible.")
-        cookie_file = None  # Do not use cookies if file is missing
+    print(f"Warning: {cookie_file} does not exist or is not accessible.")
+    cookie_file = None  # Do not use cookies if file is missing
+else:
+    # Add validation for correct format, disable if incorrect
+    try:
+        with open(cookie_file, 'r') as f:
+            first_line = f.readline().strip()
+            if not first_line.startswith('# Netscape'):
+                print("Invalid cookie format, ignoring cookies.")
+                cookie_file = None
+    except Exception as e:
+        print(f"Error reading cookies file: {e}")
+        cookie_file = None
     
     ydl_opts = {
         'listformats': False,
