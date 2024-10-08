@@ -14,7 +14,6 @@ def get_video_qualities(video_url):
         'quiet': True,
         'ratelimit': 1_000_000,
         'sleep_interval': 5,
-        'cookies': './cookies.txt',
     }
 
     try:
