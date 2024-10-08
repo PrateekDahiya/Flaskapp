@@ -5,22 +5,16 @@ from yt_dlp.utils import ExtractorError, DownloadError
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
-
-
 app = Flask(__name__)
 CORS(app)
 
 def get_video_qualities(video_url):
-    email = os.getenv('YOUTUBE_EMAIL')
-    password = os.getenv('YOUTUBE_PASSWORD')
     ydl_opts = {
         'listformats': False,
         'quiet': True,
-        'username': email,
-        'password': password,
         'ratelimit': 1_000_000,
-        'sleep_interval': 5,  
+        'sleep_interval': 5,
+        'cookies': './cookies.txt',
     }
 
     try:
