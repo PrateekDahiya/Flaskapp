@@ -1,3 +1,4 @@
 Flask
 Flask-CORS
 yt-dlp
+python-dotenv
