@@ -16,7 +16,8 @@ def get_video_qualities(video_url):
     ydl_opts = {
     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',  # Choose best video/audio combo
     'nocheckcertificate': True,  # Skip certificate checks for speed
-    'quiet': True,  # Make output more verbose to see details
+    'quiet': False,  # Make output more verbose to see details
+    'verbose' : True,
     'noplaylist': True,  # Don't download playlists
     'ratelimit': None,  # No rate limiting for faster extraction
     'sleep_interval': 0,  # No sleep between requests
