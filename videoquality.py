@@ -2,18 +2,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
 from yt_dlp.utils import ExtractorError, DownloadError
-from dotenv import load_dotenv
-import os
 
 app = Flask(__name__)
 CORS(app)
 
 def get_video_qualities(video_url):
     ydl_opts = {
-        'listformats': False,
-        'quiet': True,
-        'ratelimit': 1_000_000,
-        'sleep_interval': 5,
+        'quiet': 'false',  # Run in quiet mode
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',  # Get the best video+audio combo
+        'nocheckcertificate': True,  # Skip certificate checks for faster response
+        'verbose': True,
+        'noplaylist': True,  # Prevent downloading playlists for speed
+        'sleep_interval': 0,  # Disable sleep interval for faster processing
     }
 
     try:
@@ -25,8 +25,9 @@ def get_video_qualities(video_url):
             best_audio = None
             highest_bitrate = 0
 
+            # Process formats
             for f in formats:
-                if f.get('ext') == 'webm' and f.get('vcodec') != 'none':
+                if f.get('vcodec') != 'none':  # Only videos
                     resolution = f.get('height')
                     if resolution is not None and resolution not in video_quality_map:
                         video_quality_map[resolution] = f.get('url')
@@ -36,45 +37,34 @@ def get_video_qualities(video_url):
                         highest_bitrate = bitrate
                         best_audio = f.get('url')
 
+            # Collect available video resolutions
             video_quality_list = [{"resolution": res, "url": url} for res, url in video_quality_map.items()]
 
-            # Get the best video URL using the format 'b'
-            best_video_opts = {
-                'format': 'b',
-                'quiet': True,
-                'get_url': True
-            }
-            best_video_url = None
-            with yt_dlp.YoutubeDL(best_video_opts) as best_ydl:
-                try:
-                    best_video_url = best_ydl.extract_info(video_url, download=False)['url']
-                except (ExtractorError, DownloadError):
-                    best_video_url = None
+            # Get the best video URL
+            best_video_url = formats[0]['url'] if formats else None
 
             return video_quality_list, best_audio, best_video_url
 
     except (ExtractorError, DownloadError) as e:
-        # Handle the error, e.g., video unavailable
         print(f"Error extracting video info: {e}")
         return None, None, None
-
 
 def get_video_url_by_quality(video_list, selected_quality):
     if not video_list:
         return None
 
-    selected_resolution = selected_quality.rstrip('p')  # Remove 'p' from resolution if present
+    selected_resolution = selected_quality.rstrip('p')
     for video in video_list:
         resolution = str(video['resolution']).rstrip('p') if video['resolution'] else None
         if resolution == selected_resolution:
             return video['url']
     return None
 
-
 @app.route('/get_video_url', methods=['GET'])
 def get_video_url():
     video_id = request.args.get('video_id')
     quality = request.args.get('quality')
+    
     if not video_id:
         return jsonify({"error": "Video ID must be provided"}), 400
 
@@ -102,26 +92,9 @@ def get_video_url():
             "video_quality_options": video_qualities
         })
 
-
 @app.route('/keep-alive', methods=['GET'])
 def keep_alive():
     return jsonify({"success": True})
-
-
-@app.route('/get-short-url', methods=['GET'])
-def get_short_url():
-    video_id = request.args.get('video_id')
-    if not video_id:
-        return jsonify({"error": "Video ID must be provided"}), 400
-
-    video_url = f'https://www.youtube.com/watch?v={video_id}'
-    _, _, best_video_url = get_video_qualities(video_url)
-
-    if best_video_url is None:
-        return jsonify({"error": "Video is unavailable or restricted"}), 404
-
-    return jsonify({"stream_url": best_video_url})
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8111)
