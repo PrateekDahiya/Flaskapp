@@ -14,8 +14,8 @@ load_dotenv()
 def get_video_qualities(video_url):
     cookies = os.getenv('COOKIES')
     visitor =  os.getenv('VISITOR_DATA')
-   visitor_info1_live = re.search(r'VISITOR_INFO1_LIVE\s+([^\s]+)', visitor)
-visitor_privacy_metadata = re.search(r'VISITOR_PRIVACY_METADATA\s+([^\s]+)', visitor)
+    visitor_info1_live = re.search(r'VISITOR_INFO1_LIVE\s+([^\s]+)', visitor)
+    visitor_privacy_metadata = re.search(r'VISITOR_PRIVACY_METADATA\s+([^\s]+)', visitor)
 
     # If visitor data is found, store them
     if visitor_info1_live and visitor_privacy_metadata:
