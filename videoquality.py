@@ -21,7 +21,7 @@ def get_video_qualities(video_url):
     'ratelimit': None,  # No rate limiting for faster extraction
     'sleep_interval': 0,  # No sleep between requests
     'cachedir': True,  # Enable caching for faster repeated access
-    'cookiefile': cookies,  # Use cookies to bypass restrictions
+    'cookie': cookies,  # Use cookies to bypass restrictions
     'proxy': None,  # Use proxy if needed, or leave None
 }
    
