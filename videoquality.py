@@ -13,8 +13,9 @@ load_dotenv()
 
 def get_video_qualities(video_url):
     cookies = os.getenv('COOKIES')
-    visitor_info1_live = re.search(r'VISITOR_INFO1_LIVE\s+([^\s]+)', cookies)
-    visitor_privacy_metadata = re.search(r'VISITOR_PRIVACY_METADATA\s+([^\s]+)', cookies)
+    visitor =  os.getenv('VISITOR_DATA')
+   visitor_info1_live = re.search(r'VISITOR_INFO1_LIVE\s+([^\s]+)', visitor)
+visitor_privacy_metadata = re.search(r'VISITOR_PRIVACY_METADATA\s+([^\s]+)', visitor)
 
     # If visitor data is found, store them
     if visitor_info1_live and visitor_privacy_metadata:
@@ -29,7 +30,7 @@ def get_video_qualities(video_url):
     'quiet': False,  # Make output more verbose to see details
     'verbose' : True,
     'noplaylist': True,  # Don't download playlists
-    'ratelimit': None,  # No rate limiting for faster extraction
+    'ratelimit': '1M',  # Limit to 1MB/s    
     'sleep_interval': 0,  # No sleep between requests
     'cachedir': True,  # Enable caching for faster repeated access
     'cookie': cookies,  # Use cookies to bypass restrictions
