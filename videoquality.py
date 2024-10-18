@@ -21,8 +21,7 @@ def get_video_qualities(video_url):
         visitor_data = visitor_info1_live.group(1) + ";" + visitor_privacy_metadata.group(1)
     else:
         print("Visitor data not found in cookies.")
-        return None
-        
+        return None, None, None  # Return None for all expected values        
     ydl_opts = {
     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',  # Choose best video/audio combo
     'nocheckcertificate': True,  # Skip certificate checks for speed
@@ -96,7 +95,7 @@ def get_video_url():
     video_url = f'https://www.youtube.com/watch?v={video_id}'
     video_qualities, best_audio_url, best_video_url = get_video_qualities(video_url)
 
-    if video_qualities is None and best_audio_url is None and best_video_url is None:
+    if video_qualities is None or best_audio_url is None or best_video_url is None:
         return jsonify({"error": "Video is unavailable or restricted","video_id":video_id}), 404
 
 
