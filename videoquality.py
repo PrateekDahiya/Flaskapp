@@ -72,7 +72,8 @@ def get_video_url():
     video_qualities, best_audio_url, best_video_url = get_video_qualities(video_url)
 
     if video_qualities is None and best_audio_url is None and best_video_url is None:
-        return jsonify({"error": "Video is unavailable or restricted"}), 404
+        return jsonify({"error": "Video is unavailable or restricted","video_id":video_id}), 404
+
 
     if quality:
         selected_video_url = get_video_url_by_quality(video_qualities, quality)
