@@ -3,6 +3,8 @@ from flask_cors import CORS
 import yt_dlp
 from yt_dlp.utils import ExtractorError, DownloadError
 from dotenv import load_dotenv
+import os
+
 
 
 app = Flask(__name__)
