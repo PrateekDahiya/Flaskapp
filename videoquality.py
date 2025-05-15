@@ -8,6 +8,7 @@ import json
 import tempfile
 import random
 import time
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -69,6 +70,12 @@ def get_video_qualities(video_url, max_retries=3):
                     'retries': 10,
                     'fragment_retries': 10,
                     'skip_download': True,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['android', 'web'],
+                            'player_skip': ['webpage', 'configs'],
+                        }
+                    },
                     'http_headers': {
                         'User-Agent': random.choice(user_agents),
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -90,12 +97,38 @@ def get_video_qualities(video_url, max_retries=3):
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     logger.info(f"Attempting to extract info for URL: {video_url}")
-                    info_dict = ydl.extract_info(video_url, download=False)
+                    
+                    # Try different extraction methods
+                    try:
+                        # First try with default options
+                        info_dict = ydl.extract_info(video_url, download=False)
+                    except Exception as e:
+                        logger.warning(f"First extraction method failed: {str(e)}")
+                        try:
+                            # Try with minimal options
+                            ydl_opts['extractor_args']['youtube']['player_client'] = ['android']
+                            ydl_opts['extractor_args']['youtube']['player_skip'] = ['webpage']
+                            with yt_dlp.YoutubeDL(ydl_opts) as ydl2:
+                                info_dict = ydl2.extract_info(video_url, download=False)
+                        except Exception as e2:
+                            logger.warning(f"Second extraction method failed: {str(e2)}")
+                            try:
+                                # Try with web client and different format
+                                ydl_opts['extractor_args']['youtube']['player_client'] = ['web']
+                                ydl_opts['format'] = 'best'
+                                with yt_dlp.YoutubeDL(ydl_opts) as ydl3:
+                                    info_dict = ydl3.extract_info(video_url, download=False)
+                            except Exception as e3:
+                                logger.error(f"All extraction methods failed: {str(e3)}")
+                                if attempt < max_retries - 1:
+                                    time.sleep(2 ** attempt)
+                                    continue
+                                raise
                     
                     if not info_dict:
                         logger.error("No info dictionary returned")
                         if attempt < max_retries - 1:
-                            time.sleep(2 ** attempt)  # Exponential backoff
+                            time.sleep(2 ** attempt)
                             continue
                         return None, None, None
                     
@@ -157,7 +190,7 @@ def get_video_qualities(video_url, max_retries=3):
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} failed: {str(e)}")
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)  # Exponential backoff
+                    time.sleep(2 ** attempt)
                     continue
                 raise
 
