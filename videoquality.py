@@ -3,6 +3,8 @@ from flask_cors import CORS
 import yt_dlp
 from yt_dlp.utils import ExtractorError, DownloadError
 import logging
+import os
+import browser_cookie3
 
 app = Flask(__name__)
 CORS(app)
@@ -11,13 +13,31 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def get_youtube_cookies():
+    try:
+        # Try to get cookies from Chrome
+        cookies = browser_cookie3.chrome(domain_name='.youtube.com')
+        cookie_dict = {cookie.name: cookie.value for cookie in cookies}
+        return cookie_dict
+    except Exception as e:
+        logger.error(f"Error getting cookies: {str(e)}")
+        return None
+
 def get_video_qualities(video_url):
+    cookies = get_youtube_cookies()
+    
     ydl_opts = {
         'listformats': True,
         'quiet': True,
         'no_warnings': True,
-        'extract_flat': False,  # Changed to False to get full format info
+        'extract_flat': False,
     }
+    
+    if cookies:
+        ydl_opts['cookies'] = cookies
+        logger.info("Using browser cookies for authentication")
+    else:
+        logger.warning("No cookies available, trying without authentication")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -71,6 +91,9 @@ def get_video_qualities(video_url):
                     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                     'quiet': True,
                 }
+                if cookies:
+                    best_video_opts['cookies'] = cookies
+                    
                 with yt_dlp.YoutubeDL(best_video_opts) as best_ydl:
                     try:
                         best_info = best_ydl.extract_info(video_url, download=False)
