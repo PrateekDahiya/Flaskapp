@@ -1,4 +1,4 @@
 flask
 werkzeug
 flask-cors
-yt-dlp
+youtube-dl
