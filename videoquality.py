@@ -7,6 +7,7 @@ import os
 import json
 import tempfile
 import random
+import time
 
 app = Flask(__name__)
 CORS(app)
@@ -15,7 +16,7 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def get_video_qualities(video_url):
+def get_video_qualities(video_url, max_retries=3):
     # Create a temporary file for cookies
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_cookie_file:
         # Write the cookie content with the newer secure cookies
@@ -51,104 +52,114 @@ def get_video_qualities(video_url):
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0'
         ]
 
-        ydl_opts = {
-            'listformats': True,
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': False,
-            'cookies': temp_cookie_path,
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-            'nocheckcertificate': True,
-            'ignoreerrors': True,
-            'no_color': True,
-            'geo_bypass': True,
-            'geo_verification_proxy': 'socks5://127.0.0.1:9050',  # Using Tor proxy
-            'proxy': 'socks5://127.0.0.1:9050',  # Using Tor proxy
-            'socket_timeout': 30,
-            'retries': 10,
-            'fragment_retries': 10,
-            'skip_download': True,
-            'http_headers': {
-                'User-Agent': random.choice(user_agents),
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Cache-Control': 'max-age=0',
-                'TE': 'trailers'
-            }
-        }
-        
-        logger.info("Using temporary cookie file with secure cookies and proxy for authentication")
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            logger.info(f"Attempting to extract info for URL: {video_url}")
-            info_dict = ydl.extract_info(video_url, download=False)
-            
-            if not info_dict:
-                logger.error("No info dictionary returned")
-                return None, None, None
+        for attempt in range(max_retries):
+            try:
+                ydl_opts = {
+                    'listformats': True,
+                    'quiet': True,
+                    'no_warnings': True,
+                    'extract_flat': False,
+                    'cookies': temp_cookie_path,
+                    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+                    'nocheckcertificate': True,
+                    'ignoreerrors': True,
+                    'no_color': True,
+                    'geo_bypass': True,
+                    'socket_timeout': 30,
+                    'retries': 10,
+                    'fragment_retries': 10,
+                    'skip_download': True,
+                    'http_headers': {
+                        'User-Agent': random.choice(user_agents),
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Sec-Fetch-User': '?1',
+                        'Cache-Control': 'max-age=0',
+                        'TE': 'trailers'
+                    }
+                }
                 
-            formats = info_dict.get('formats', [])
-            logger.info(f"Found {len(formats)} formats")
-
-            video_quality_map = {}
-            best_audio = None
-            highest_bitrate = 0
-
-            for f in formats:
-                # Check for video formats
-                if f.get('vcodec') != 'none':
-                    resolution = f.get('height')
-                    if resolution is not None and resolution not in video_quality_map:
-                        # Get the direct URL if available, otherwise use format_id
-                        url = f.get('url')
-                        if not url:
-                            # If no direct URL, try to get the format URL
-                            try:
-                                format_url = ydl.urlopen(f['url']).geturl()
-                                url = format_url
-                            except:
-                                continue
-                        video_quality_map[resolution] = url
+                logger.info(f"Attempt {attempt + 1}/{max_retries} to extract video info")
                 
-                # Check for audio formats
-                if f.get('acodec') != 'none' and f.get('abr') is not None:
-                    bitrate = f.get('abr')
-                    if bitrate > highest_bitrate:
-                        url = f.get('url')
-                        if url:
-                            highest_bitrate = bitrate
-                            best_audio = url
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    logger.info(f"Attempting to extract info for URL: {video_url}")
+                    info_dict = ydl.extract_info(video_url, download=False)
+                    
+                    if not info_dict:
+                        logger.error("No info dictionary returned")
+                        if attempt < max_retries - 1:
+                            time.sleep(2 ** attempt)  # Exponential backoff
+                            continue
+                        return None, None, None
+                    
+                    formats = info_dict.get('formats', [])
+                    logger.info(f"Found {len(formats)} formats")
 
-            video_quality_list = [{"resolution": res, "url": url} for res, url in video_quality_map.items()]
-            logger.info(f"Found {len(video_quality_list)} video qualities")
+                    video_quality_map = {}
+                    best_audio = None
+                    highest_bitrate = 0
 
-            # Get the best video URL
-            best_video_url = None
-            if formats:
-                try:
-                    best_info = ydl.extract_info(video_url, download=False)
-                    if isinstance(best_info, dict):
-                        best_video_url = best_info.get('url')
-                        if not best_video_url and 'formats' in best_info:
-                            # Try to get URL from formats
-                            for f in best_info['formats']:
-                                if f.get('vcodec') != 'none':
-                                    best_video_url = f.get('url')
-                                    if best_video_url:
-                                        break
-                except Exception as e:
-                    logger.error(f"Error getting best video URL: {str(e)}")
+                    for f in formats:
+                        # Check for video formats
+                        if f.get('vcodec') != 'none':
+                            resolution = f.get('height')
+                            if resolution is not None and resolution not in video_quality_map:
+                                # Get the direct URL if available, otherwise use format_id
+                                url = f.get('url')
+                                if not url:
+                                    # If no direct URL, try to get the format URL
+                                    try:
+                                        format_url = ydl.urlopen(f['url']).geturl()
+                                        url = format_url
+                                    except:
+                                        continue
+                                video_quality_map[resolution] = url
+                        
+                        # Check for audio formats
+                        if f.get('acodec') != 'none' and f.get('abr') is not None:
+                            bitrate = f.get('abr')
+                            if bitrate > highest_bitrate:
+                                url = f.get('url')
+                                if url:
+                                    highest_bitrate = bitrate
+                                    best_audio = url
+
+                    video_quality_list = [{"resolution": res, "url": url} for res, url in video_quality_map.items()]
+                    logger.info(f"Found {len(video_quality_list)} video qualities")
+
+                    # Get the best video URL
                     best_video_url = None
+                    if formats:
+                        try:
+                            best_info = ydl.extract_info(video_url, download=False)
+                            if isinstance(best_info, dict):
+                                best_video_url = best_info.get('url')
+                                if not best_video_url and 'formats' in best_info:
+                                    # Try to get URL from formats
+                                    for f in best_info['formats']:
+                                        if f.get('vcodec') != 'none':
+                                            best_video_url = f.get('url')
+                                            if best_video_url:
+                                                break
+                        except Exception as e:
+                            logger.error(f"Error getting best video URL: {str(e)}")
+                            best_video_url = None
 
-            return video_quality_list, best_audio, best_video_url
+                    return video_quality_list, best_audio, best_video_url
+
+            except Exception as e:
+                logger.error(f"Attempt {attempt + 1} failed: {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
+                raise
 
     except Exception as e:
         logger.error(f"Error in get_video_qualities: {str(e)}")
