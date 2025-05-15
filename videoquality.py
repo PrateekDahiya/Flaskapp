@@ -19,7 +19,14 @@ def get_video_qualities(video_url):
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
-        'cookiefile': 'cookies.txt'  # Use the cookie file
+        'cookies': 'cookies.txt',
+        'cookiesfrombrowser': None,  # Disable browser cookies
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'nocheckcertificate': True,
+        'ignoreerrors': True,
+        'no_color': True,
+        'geo_bypass': True,
+        'geo_verification_proxy': None,
     }
     
     logger.info("Using cookie file for authentication")
@@ -71,28 +78,20 @@ def get_video_qualities(video_url):
             # Get the best video URL
             best_video_url = None
             if formats:
-                # Try to get the best video format
-                best_video_opts = {
-                    'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-                    'quiet': True,
-                    'cookiefile': 'cookies.txt'  # Use the cookie file here too
-                }
-                    
-                with yt_dlp.YoutubeDL(best_video_opts) as best_ydl:
-                    try:
-                        best_info = best_ydl.extract_info(video_url, download=False)
-                        if isinstance(best_info, dict):
-                            best_video_url = best_info.get('url')
-                            if not best_video_url and 'formats' in best_info:
-                                # Try to get URL from formats
-                                for f in best_info['formats']:
-                                    if f.get('vcodec') != 'none':
-                                        best_video_url = f.get('url')
-                                        if best_video_url:
-                                            break
-                    except Exception as e:
-                        logger.error(f"Error getting best video URL: {str(e)}")
-                        best_video_url = None
+                try:
+                    best_info = ydl.extract_info(video_url, download=False)
+                    if isinstance(best_info, dict):
+                        best_video_url = best_info.get('url')
+                        if not best_video_url and 'formats' in best_info:
+                            # Try to get URL from formats
+                            for f in best_info['formats']:
+                                if f.get('vcodec') != 'none':
+                                    best_video_url = f.get('url')
+                                    if best_video_url:
+                                        break
+                except Exception as e:
+                    logger.error(f"Error getting best video URL: {str(e)}")
+                    best_video_url = None
 
             return video_quality_list, best_audio, best_video_url
 
