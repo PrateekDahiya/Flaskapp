@@ -13,57 +13,16 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Default cookies to use if environment variable is not set
-DEFAULT_COOKIES = {
-    "CONSISTENCY": "AKreu9vL8B0pKl6VsX47OHG02aYAe49F81NrMl-vQoLHeqvSxBgVOJgw-R-UqHcgvQeuMSi54CwmIvsK2ppku2TOMm1iABFtgCGP7R2lZnn6TMtW77KKN_3ig2ShfsDoD_Q5IvCwaAJsTQ6eEBbXJDQB",
-    "HSID": "AX6v6N7jhdCoZsFr0",
-    "LOGIN_INFO": "AFmmF2swRQIgO3oNkT3TPMAC9iHtSKCIAJIhZjDWmwwbZCizE8cwqaUCIQCBvd7b2AGeAC5ddB4Zy9c4U--Lq3h6lTUM6m2cgdgqKw:QUQ3MjNmeFFobDNPUXVENk5wRTJReWtwdEE4eXdTUmt2UmpWMXBsNXpLNk5fTVlPYmE2QldoRjc0YXF0MUNxLVgzRkI4c1dWcnRnQUNLQmhDeHN1dG9MT3MyRm1ZNGdXRWNGWHFSalByR0RPZ3JrV3ZpWW9aVkpQZmxyWU1scXdyX243ajI3NWNFU2xDcGZBY3VOek9hVTRIU1FCRmhmaE5R",
-    "SAPISID": "WwTDrgX5pM_1uu_a/AiJuGsl94j9slHVfo",
-    "SID": "g.a000wwjr-jihvUHsf3_MUPbN7mT8eUjaymCbKBQb3pc92-24RCKBpFe8x1MEE5fA3Irm1Td8WgACgYKAfESARcSFQHGX2MiXdUOmnITlUVD2S_qMkeMpBoVAUF8yKoN-S44Ge5EV8Br4mZIqO2D0076",
-    "SSID": "AL88MJtEUo3wIFjvB",
-    "VISITOR_INFO1_LIVE": "Nz26H42eE3g",
-    "YSC": "HFLs51O0HLQ"
-}
-
-def get_youtube_cookies():
-    try:
-        # Try to get cookies from environment variable
-        cookies_str = os.getenv('YOUTUBE_COOKIES')
-        if cookies_str:
-            try:
-                # Try parsing as JSON first
-                cookies = json.loads(cookies_str)
-                logger.info("Successfully loaded cookies from environment variable")
-                return cookies
-            except json.JSONDecodeError:
-                # If not JSON, try parsing as Netscape format
-                cookies = yt_dlp.utils.cookie_import(cookies_str)
-                if cookies:
-                    logger.info("Successfully loaded cookies from Netscape format")
-                    return cookies
-        
-        # If no environment variable or parsing failed, use default cookies
-        logger.info("Using default cookies")
-        return DEFAULT_COOKIES
-    except Exception as e:
-        logger.error(f"Error getting cookies: {str(e)}")
-        return DEFAULT_COOKIES
-
 def get_video_qualities(video_url):
-    cookies = get_youtube_cookies()
-    
     ydl_opts = {
         'listformats': True,
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
+        'cookiefile': 'cookies.txt'  # Use the cookie file
     }
     
-    if cookies:
-        ydl_opts['cookies'] = cookies
-        logger.info("Using provided cookies for authentication")
-    else:
-        logger.warning("No cookies available, trying without authentication")
+    logger.info("Using cookie file for authentication")
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -116,9 +75,8 @@ def get_video_qualities(video_url):
                 best_video_opts = {
                     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                     'quiet': True,
+                    'cookiefile': 'cookies.txt'  # Use the cookie file here too
                 }
-                if cookies:
-                    best_video_opts['cookies'] = cookies
                     
                 with yt_dlp.YoutubeDL(best_video_opts) as best_ydl:
                     try:
