@@ -6,6 +6,7 @@ import logging
 import os
 import json
 import tempfile
+import random
 
 app = Flask(__name__)
 CORS(app)
@@ -42,6 +43,14 @@ def get_video_qualities(video_url):
         temp_cookie_path = temp_cookie_file.name
 
     try:
+        # List of common user agents
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0'
+        ]
+
         ydl_opts = {
             'listformats': True,
             'quiet': True,
@@ -53,21 +62,30 @@ def get_video_qualities(video_url):
             'ignoreerrors': True,
             'no_color': True,
             'geo_bypass': True,
-            'geo_verification_proxy': None,
+            'geo_verification_proxy': 'socks5://127.0.0.1:9050',  # Using Tor proxy
+            'proxy': 'socks5://127.0.0.1:9050',  # Using Tor proxy
+            'socket_timeout': 30,
+            'retries': 10,
+            'fragment_retries': 10,
+            'skip_download': True,
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
+                'User-Agent': random.choice(user_agents),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
                 'Sec-Fetch-User': '?1',
-                'Upgrade-Insecure-Requests': '1',
-                'Connection': 'keep-alive',
-                'Cache-Control': 'max-age=0'
+                'Cache-Control': 'max-age=0',
+                'TE': 'trailers'
             }
         }
         
-        logger.info("Using temporary cookie file with secure cookies for authentication")
+        logger.info("Using temporary cookie file with secure cookies and proxy for authentication")
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             logger.info(f"Attempting to extract info for URL: {video_url}")
